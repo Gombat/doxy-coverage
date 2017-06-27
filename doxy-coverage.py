@@ -112,7 +112,11 @@ def parse(path):
 
 		file_fp = os.path.join (path, "%s.xml" %(entry.get('refid')))
 		tmp = parse_file (file_fp)
-		files[tmp[0]] = tmp[1]
+		if tmp[1]:
+			if tmp[0] in files:
+				files[tmp[0]].append(tmp[1])
+			else:
+				files[tmp[0]] = [tmp[1]]
 
 	return files
 
@@ -123,8 +127,8 @@ def report (files, exclude_dirs):
 		if not defs:
 			return 100
 
-		doc_yes = len([d for d in defs.values() if d])
-		doc_no  = len([d for d in defs.values() if not d])
+		doc_yes = len([d[k] for d in defs for k in d if d[k]])
+		doc_no  = len([d[k] for d in defs for k in d if not d[k]])
 		return (doc_yes * 100.0 / (doc_yes + doc_no))
 
 	def file_cmp (a,b):
@@ -136,7 +140,6 @@ def report (files, exclude_dirs):
 
 	total_yes = 0
 	total_no  = 0
-
 	for f in files_sorted:
 		skip = False
 		for exclude_dir in exclude_dirs:
@@ -150,8 +153,8 @@ def report (files, exclude_dirs):
 		if not defs:
 			continue
 
-		doc_yes = len([d for d in defs.values() if d])
-		doc_no  = len([d for d in defs.values() if not d])
+		doc_yes = len([d[k] for d in defs for k in d if d[k]])
+		doc_no  = len([d[k] for d in defs for k in d if not d[k]])
 		doc_per = doc_yes * 100.0 / (doc_yes + doc_no)
 
 		total_yes += doc_yes
@@ -159,11 +162,10 @@ def report (files, exclude_dirs):
 
 		print ('%3d%% - %s - (%d of %d)'%(doc_per, f, doc_yes, (doc_yes + doc_no)))
 
-		defs_sorted = defs.keys()
+		defs_sorted = [k for d in defs for k in d if not d[k]]
 		defs_sorted.sort()
 		for d in defs_sorted:
-			if not defs[d]:
-				print ("\t", d)
+			print ("\t", d)
 
 	total_all = total_yes + total_no
 	total_per = total_yes * 100 / total_all
