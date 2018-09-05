@@ -35,7 +35,8 @@ import sys
 import argparse
 import xml.etree.ElementTree as ET
 import functools
-from __future__ import print_function
+#from __future__ import print_function
+import io
 
 __author__ = "Alvaro Lopez Ortega"
 __email__ = "alvaro@alobbs.com"
@@ -59,49 +60,52 @@ def FATAL(*objs):
 
 
 def parse_file(fullpath):
-    tree = ET.parse(fullpath)
+    with io.open(fullpath, 'r') as f:
+      content = f.read()
+      parser = ET.XMLParser(encoding="utf-8")
+      tree = ET.XML(content, parser=parser)
 
-    sourcefile = None
-    definitions = {}
+      sourcefile = None
+      definitions = {}
 
-    for definition in tree.findall("./compounddef//memberdef"):
-        # Should it be documented
-        if(definition.get('kind') == 'function' and
-           definition.get('static') == 'yes'):
-            continue
+      for definition in tree.findall("./compounddef//memberdef"):
+          # Should it be documented
+          if(definition.get('kind') == 'function' and
+             definition.get('static') == 'yes'):
+              continue
 
-        # Is the definition documented?
-        documented = False
-        for k in ('briefdescription',
-                  'detaileddescription',
-                  'inbodydescription'):
-            if definition.findall("./%s/" % (k)):
-                documented = True
-                break
+          # Is the definition documented?
+          documented = False
+          for k in ('briefdescription',
+                    'detaileddescription',
+                    'inbodydescription'):
+              if definition.findall("./%s/" % (k)):
+                  documented = True
+                  break
 
-        # Name
-        d_def = definition.find('./definition')
-        d_nam = definition.find('./name')
+          # Name
+          d_def = definition.find('./definition')
+          d_nam = definition.find('./name')
 
-        if not sourcefile:
-            loc = definition.find('./location')
-            if loc is not None:
-                sourcefile = loc.get('file')
+          if not sourcefile:
+              loc = definition.find('./location')
+              if loc is not None:
+                  sourcefile = loc.get('file')
 
-        if d_def is not None:
-            name = d_def.text
-        elif d_nam is not None:
-            name = d_nam.text
-        else:
-            name = definition.get('id')
+          if d_def is not None:
+              name = d_def.text
+          elif d_nam is not None:
+              name = d_nam.text
+          else:
+              name = definition.get('id')
 
-        # Aggregate
-        definitions[name] = documented
+          # Aggregate
+          definitions[name] = documented
 
-    if not sourcefile:
-        sourcefile = fullpath
+      if not sourcefile:
+          sourcefile = fullpath
 
-    return (sourcefile, definitions)
+      return (sourcefile, definitions)
 
 
 def parse(path):
